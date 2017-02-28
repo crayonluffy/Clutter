@@ -1,0 +1,122 @@
+<html>
+<head>
+    <script src="/javascripts/jquery-3.1.1.min.js"></script>
+    <script src="/javascripts/porthole.min.js"></script>
+</head>
+<body>
+<p> <b> From parent </b> </p>
+<p> origin : <span id="sender_origin"> </span> </p>
+<p> data : <span id="sender_data"> </span> </p>
+<p> <b> Response to parent </b> </p>
+<p> (name,value) : <input type="text" id="reply_to_parent_name1"> </input>, <input type="text" id="reply_to_parent_val1"> </input> </p>
+<p> (name,value) : <input type="text" id="reply_to_parent_name2"> </input>, <input type="text" id="reply_to_parent_val2"> </input> </p>
+<br>
+<p> <b> Send to parent </b> </p>
+<p> (name,value) : <input type="text" id="send_to_parent_name"> </input>, <input type="text" id="send_to_parent_val"> </input> </p>
+<button id="send_to_parent"> send to parent </button>
+ 
+<script>
+    $(document).ready(function() {
+     
+        var windowProxy;
+         
+        // Create a proxy window to send to and receive
+        windowProxy = new Porthole.WindowProxy(
+            'http://learning.sd.polyu.edu.hk');
+        // Register an event handler to receive messages;
+        //alert("check point1");
+        windowProxy.addEventListener(   function(msgEvent)
+                {   var str='';
+                    var obj=new Object;
+                    for (var name in msgEvent.data)
+                    {   str = msgEvent.data[name];
+                        obj[name]=msgEvent.data[name];
+                    }
+                    if (obj["method"]=="post")
+                    {
+                            if (obj["message"]=="")
+                                return msgEvent.source.post(obj);
+                            $.post("/api/4.1",{name:obj["name"], message:obj["message"]},function(data, status){
+                            obj["message"] = data.message;
+                            obj["method"]="post";
+                            msgEvent.source.post(obj);
+                        });
+                    }
+                    else if (obj["method"]=="get")
+                    {
+                            $.get( "/api/4.1/"+obj["name"], function( data ) {
+                                if (!data["success"])
+                                {
+                                    obj["message"] = "You have not left any message yet.";
+                                }
+                                else
+                                    obj = data;
+                            obj["method"]="get";
+                            msgEvent.source.post(obj);
+                        });
+                    }
+                    else if (obj["method"]=="delete")
+                    {
+                        $.ajax({
+                            url: '/api/4.1/'+obj["name"],
+                            type: 'DELETE',
+                            success: function(result) {
+                                obj=result;
+                                obj["method"]="delete";
+                                return obj;
+                            }
+                        });
+                    }
+                    else if (obj["method"]=="search")
+                    {
+                        $.get( "/api/4.1/"+obj["name"], function( data ) {
+                                if (!data["success"])
+                                {
+                                    obj["message"] = "He/She has not left any message yet.";
+                                }
+                                else
+                                    obj = data;
+                            obj["method"]="search";
+                            msgEvent.source.post(obj);
+                        });
+                    }
+                    else if (obj["method"]=="all")
+                    {
+                        $.get( "/api/4.1", function( data,status ) {
+                            var array = [];
+                            var obj_all = new Object;
+                                if (typeof data["success"]==='undefined')
+                                {
+                                    array = data;
+                                }
+                                else
+                                {
+                                    obj_all["message"] = "No one left message yet.";
+                                    array.push(obj_all);
+                                }
+                            msgEvent.source.post(array);
+                        });
+                    }
+                    else if (obj["method"]=="post_other")
+                    {
+                        if (obj["message"]=="")
+                               return msgEvent.source.post(obj);
+                        $.post("/api/4.1",{name:obj["name"], message:obj["message"]},function(data, status){
+                        });
+                      }
+                    else if (obj["method"]=="delete_other")
+                    {
+                        $.ajax({
+                           url: '/api/4.1/'+obj["name"],
+                           type: 'DELETE',
+                            success: function(result) {
+
+                            }
+                          });    
+                    }            
+                });
+    });
+     
+</script>
+</body>
+</html>
